@@ -93,7 +93,11 @@ function ponychanx() {
 		},
 		get: function() {
 			var xhr = new XMLHttpRequest();
-			xhr.open("GET", durl+"?"+new Date().getTime());
+			if(durl.indexOf("lunachan") < 0) {
+				xhr.open("GET", durl+"?"+new Date().getTime());
+			} else {
+				xhr.open("GET", durl);
+			}
 			xhr.setRequestHeader("If-Modified-Since", Updater.last);
 			xhr.setRequestHeader("Accept", "*/*");
 			xhr.send();
