@@ -4,6 +4,7 @@
 // @description   Adds various bloat.
 // @author        milky
 // @contributor   Storm Vision
+// @contributor   onekopaka
 // @include       http://www.ponychan.net/chan/*
 // @include       *lunachan.net/*
 // @exclude       http://www.ponychan.net/chan/
@@ -11,7 +12,7 @@
 // @exclude       http://www.ponychan.net/chan/?p=*
 // @exclude       *lunachan.net/
 // @exclude       *lunachan.net/board.php
-// @version       0.16
+// @version       0.18
 // @icon          http://i.imgur.com/12a0D.jpg
 // @updateURL     https://github.com/milkytiptoe/ponychan-x/raw/master/pchanx.user.js
 // @homepage      http://www.ponychan.net/chan/meta/res/115168.html
@@ -25,14 +26,13 @@ function ponychanx() {
 	var rto = document.URL.split("#i")[1];
 	
 	var Main = {
-		version: 16,
+		version: 18,
 		bid: null,
 		tid: null,
 		init: function() {
 			if ($jq("h1").length > 0 && $jq("h1").html() == "404 Not Found") {
-				if (durl.indexOf("+50") > -1) {
+				if (durl.indexOf("+50") > -1)
 					return window.location = durl.replace("+50", "");
-				}
 				return;
 			}
 			Main.tid = $jq("#postform :input[name='replythread']").val();
@@ -93,11 +93,7 @@ function ponychanx() {
 		},
 		get: function() {
 			var xhr = new XMLHttpRequest();
-			if(durl.indexOf("lunachan") < 0) {
-				xhr.open("GET", durl+"?"+new Date().getTime());
-			} else {
-				xhr.open("GET", durl);
-			}
+			xhr.open("GET", durl+(durl.indexOf("lunachan") > -1 ? "" : "?"+new Date().getTime()));
 			xhr.setRequestHeader("If-Modified-Since", Updater.last);
 			xhr.setRequestHeader("Accept", "*/*");
 			xhr.send();
@@ -129,7 +125,7 @@ function ponychanx() {
 										$jq(".thread .op").after(this);
 									Posts.newhandle(this);
 									Posts.fixhover(this);
-									Posts.fixdate(this);
+									Posts.newpostupdate(this);
 									Notifier.newhandle(this);
 									Filter.newhandle(this);
 									if (sat && Settings.gets("Scroll on new post") == "true")
@@ -200,6 +196,15 @@ function ponychanx() {
 			<input type="button" value="Reply" accesskey="z">\
 			<div class="postopts"><input type="checkbox" name="spoiler" /> Spoiler <label>Auto <input type="checkbox" name="auto" /></label></div>\
 			<div id="imagelist"></div>';
+			if (QR.checkmod()) {
+				qr.innerHTML += '<div id="modpanel">\
+				<input name="modpassword" placeholder="Mod Password" value="'+getCookie("modpassword")+'" size="28" maxlength="75" type="text" /> \
+				<label title="Lock"><input name="lockonpost" type="checkbox" /> Lock Thread</label> \
+				<label title="Sticky"><input name="stickyonpost" type="checkbox" /> Sticky</label> \
+				<label title="Raw HTML"><input name="rawhtml" type="checkbox" /> Raw HTML</label> \
+				<label title="Name"><input name="usestaffname" type="checkbox" /> Name</label> \
+				</div>';
+			}
 			$jq("#qr .close a").live("click", function() { QR.hide(); });
 			$jq("body").append(qr);
 			$jq(window).resize(function() {
@@ -255,7 +260,7 @@ function ponychanx() {
 			$jq("#qr").css("display", "none");
 		},
 		send: function() {
-			if (!$jq("#qr").length) return;			
+			if (!$jq("#qr").length) return;
 			$jq("#qr > input[type='button']").val("...");
 			var n = $jq("#qr :input[name='name']").val();
 			var e = $jq("#qr :input[name='em']").val();
@@ -265,13 +270,6 @@ function ponychanx() {
 			var pp = $jq("#postform :input[name='postpassword']").val();
 			var qri = $jq("#postform :input[name='quickreply']").val();
 			var hmpcyh = $jq("#postform :input[name='how_much_pony_can_you_handle']").val();
-			// Mod
-			var mp = $jq("#postform :input[name='modpassword']").val();
-			var lop = $jq("#postform :input[name='lockonpost']").val();
-			var sop = $jq("#postform :input[name='stickyonpost']").val();
-			var rh = $jq("#postform :input[name='rawhtml']").val();
-			var usn = $jq("#postform :input[name='usestaffname']").val();
-			// End mod
 			var fid = parseInt($jq("#thumbselected").attr("name"));
 			var i = document.getElementById("imgfile").files[fid];
 			var d = new FormData();
@@ -284,13 +282,18 @@ function ponychanx() {
 			d.append("postpassword", pp);
 			d.append("how_much_pony_can_you_handle", hmpcyh);
 			d.append("stats_referrer", "");
-			// Mod
-			d.append("modpassword", mp);
-			d.append("lockonpost", lop);
-			d.append("stickyonpost", sop);
-			d.append("rawhtml", rh);
-			d.append("usestaffname", usn);
-			// End mod
+			if (QR.checkmod()) {
+				var mp = $jq("#qr #modpanel :input[name='modpassword']").val();
+				var lop = $jq("#qr #modpanel :input[name='lockonpost']").is(":checked");
+				var sop = $jq("#qr #modpanel :input[name='stickyonpost']").is(":checked");
+				var rh = $jq("#qr #modpanel :input[name='rawhtml']").is(":checked");
+				var usn = $jq("#qr #modpanel :input[name='usestaffname']").is(":checked");
+				d.append("modpassword", mp);
+				d.append("lockonpost", lop);
+				d.append("stickyonpost", sop);
+				d.append("rawhtml", rh);
+				d.append("usestaffname", usn);
+			}
 			if (Main.bid == "test" || Main.bid == "show" || Main.bid == "media" || Main.bid == "collab" || Main.bid == "phoenix" || Main.bid == "vinyl") {
 				var em = $jq("#qr :input[name='embed']").val();
 				var emt = $jq("#qr select").val();
@@ -443,12 +446,18 @@ function ponychanx() {
 						var cp = ta.selectionStart;
 						ta.value = ta.value.slice(0, cp) + ins + ta.value.slice(ta.selectionEnd);
 						ta.focus();
-						var r = cp + ins.length;
+						var r = cp + ins.length - 4;
 						ta.setSelectionRange(r, r);
 						return e.preventDefault();
 					}
 				}
 			});
+		},
+		checkmod: function() {
+			if (durl.indexOf("ponychan") > -1)
+				return checkMod();
+			else
+				return false;
 		}
 	};
 	
@@ -499,7 +508,7 @@ function ponychanx() {
 					});
 				});
 			}
-			$jq("table:not(.postform):not(.userdelete)").each(function() {
+			$jq("#delform table:not(.postform):not(.userdelete)").each(function() {
 				Posts.newhandle(this);
 			});			
 		},
@@ -529,15 +538,17 @@ function ponychanx() {
 							if (f) {
 								var c = $jq("td.reply[id]", this).addClass("inline").insertAfter(anc);
 								Posts.newhandle(c);
+								Posts.newpostupdate(c);
 								c.find("a[name], .postfooter").remove();
 								c.find(".reflink a").removeAttr("onclick").unbind("click");
 								c.find(".reflink a:not(:first)").removeAttr("href").css("cursor","not-allowed");
 								return false;
 							}
 						});
-						if (!f) QR.settitle("Could not load post <a target='_blank' href='"+anc.href+"'>Open in new tab</a>");
+						if (!f)
+							$jq("<td class='reply inline'>Reply not found<br /><a target='_blank' style='font-family: \"Trebuchet MS\";' href='"+anc.href+"'>Open thread in new tab</a></td>").insertAfter(anc);
 					} else {
-						QR.settitle("Post not found ("+xhr.status+")");
+						$jq("<td class='reply inline'>Reply not found ("+xhr.status+")</td>").insertAfter(anc);
 					}
 				}
 			}
@@ -549,7 +560,12 @@ function ponychanx() {
 			var eh = (Settings.gets("Enable hide post buttons") == "true");
 			var bp = (Main.tid == "0");
 			if (eh) {
-				$jq(".doubledash", p).html("").append($jq("<a>[ - ]</a>").attr("href","javascript:;").on("click", function() {
+				var dd = $jq(".doubledash", p);
+				if (durl.indexOf("lunachan") > -1 && dd.length == 0) {
+					dd = $jq("<td class='doubledash'></td>");
+					$jq("tbody > tr:first", p).prepend(dd);
+				}
+				dd.html("").append($jq("<a>[ - ]</a>").attr("href","javascript:;").on("click", function() {
 					Posts.hide(this);
 				}));
 			}
@@ -558,14 +574,22 @@ function ponychanx() {
 				ql.attr("href", "javascript:;").removeAttr("onclick").on("click", function() { QR.quote(this.innerHTML); return false; } );
 			}
 			var from = ql.html();
-			var im = $jq(p).find("img", p)[0];
+			var im = $jq("a[href] span[id] img", p)[0];
 			var ns;
 			if (im != null) {
+				var os = im.src;
 				ns = im.src;
 				ns = ns.replace("/thumb/", "/src/");
 				ns = ns.replace("s.", ".");
 				if (Settings.gets("Animate gif thumbnails") == "true" && im.src.indexOf("s.gif") > 0)
 					im.src = ns;
+				var fsa = $jq(".filesize", p).find("a");
+				if (fsa.length > 0) {
+					var imp = $jq(im).parent();
+					fsa.attr("href", "javascript:;");
+					fsa.removeAttr("onclick");
+					fsa.on("click", function() { Posts.expandimg(imp, ns, os); });
+				}
 			}
 			if (eb || ei || eq) {
 				$jq("blockquote a[class]", p).each(function() {
@@ -634,13 +658,29 @@ function ponychanx() {
 				}
 			});
 		},
-		fixdate: function(p) {
+		newpostupdate: function(p) {
 			var timezone = getCookie('timezone');
 			timezone = timezone === '' ? -8 : parseInt(timezone, 10);
 			var timeFormat = 'ddd, MMM d, yyyy ' + (getCookie('twelvehour') !== '0' ? 'h:mm tt' : 'H:mm');
 			$jq(".posttime",p).html(Date.parse($jq(".posttime",p).text()).addHours(8 + timezone).toString(timeFormat)
 				.replace(/([AP]M)$/, '<span style="font-size:0.75em">$1</span>'));
-		}
+			var mt = $jq(".postertrip",p);
+			var rd = $jq(".rd", mt);
+			if (rd.length > 0)
+				new Rainbow(rd[0],224,true,100,-20);
+			else {
+				if (mt.html() === '!!PinkiePie')
+					mt.html() = '<img src="/chan/css/images/pinkie-cutie-sm.png" alt="!!" width=12 height=20 style="position:relative;top:3px"><span style="color:#e4a">PinkiePie</span>';
+				if (mt.html() === '!!Rarity')
+					mt.html() = '<img src="/chan/css/images/rock-sm.png" alt="!!" width=15 height=20 style="vertical-align:top">Rarity';
+			}
+		},
+		expandimg: function(imp, ns, os) {
+			var img = $jq("img", imp)[0];
+			var nns = img.src == os ? ns : os;
+			var mw = document.documentElement.clientWidth-100+"px";
+			imp.html("<img src='"+nns+"' class='thumb' style='max-width: "+mw+";' />");
+		},
 	}
 	
 	var Html = {
@@ -651,23 +691,16 @@ function ponychanx() {
 		},
 		hidepostform: function() {
 			if (Settings.gets("Hide original post form") == "true" && $jq("#postform").length > 0) {
-				// Hide the original post form
 				$jq("#postform").hide();
-				
-				// Create element to open QR box.
 				var a = document.createElement("a");
 				Main.tid == "0" ? a.innerHTML = "<h2>New Thread</h2>" : a.innerHTML = "<h2>Quick Reply</h2>";
 				a.href = "javascript:;";
 				a.onclick = function() { QR.show(); };
-
-				// Create element to toggle original post box.		
-				var toggleOrigPF = document.createElement("a");
-				toggleOrigPF.innerHTML = "<h5>Toggle original post box.</h5>";
-				toggleOrigPF.href = "javascript:;";
-				toggleOrigPF.onclick = function() { $jq("#postform").toggle(); };
-
-				// Add elements into the DOM.
-				$jq(".postarea").prepend(toggleOrigPF);
+				var topf = document.createElement("a");
+				topf.innerHTML = "<h5>Show/Hide Original Post Form</h5>";
+				topf.href = "javascript:;";
+				topf.onclick = function() { $jq("#postform").toggle(); };
+				$jq(".postarea").prepend(topf);
 				$jq(".postarea").prepend(a);
 			}
 		},
@@ -750,7 +783,7 @@ function ponychanx() {
 			#qr .embedwrap select { padding: 3px 0 2px 0; }\
 			#qr .embedwrap { display: none; }\
 			#qr .top a { height: 19px; float: left; color: white; background-color: black; padding: 0 0 1px 1px; }\
-			.postarea a h2 { padding: 17px 0 17px 0; }\
+			.postarea a h2 { padding-bottom: 4px; }\
 			.reply.inline { border: 1px solid rgba(0, 0, 0, 0.3) !important; }\
 			.hidden { height: 10px; opacity: 0.1; } #updatetimer { width: 30px; }\
 			#pxoptions { box-shadow: 3px 3px 8px #666; display: none; font-size: 13px; padding: 10px; position: absolute; background-color: gray; top: 32px; right: 185px; border: 1px solid black; }\
@@ -767,8 +800,11 @@ function ponychanx() {
 			#qr input[type='text'] { padding: 2px 0 2px 4px; height: 20px; width: 394px; border: 1px solid gray; margin: 1px 0; }\
 			#qr textarea { width: 394px; padding: 2px 0 2px 4px; font-family: sans-serif; height: 98px; font-size: small; }\
 			.extrabtns { vertical-align: top; }\
-			#pxbtn { margin-right: -4px; }";
-			if (Settings.gets("Enable hide post buttons")=="true") s.innerHTML += " td.reply { margin-left: 25px; } .doubledash { display: block !important; }";
+			#pxbtn { margin-right: -4px; }\
+			.postarea a h5 { margin: 0 0 12px 0; }\
+			#modpanel { clear: both; font-size: small; }\
+			#modpanel label input { position: relative; top: 2px; }";
+			if (Settings.gets("Enable hide post buttons")=="true") s.innerHTML += " td.reply { margin-left: 25px; } .doubledash { white-space: nowrap; display: block !important; }";
 			document.body.appendChild(s);
 		}
 	};
@@ -811,7 +847,7 @@ function ponychanx() {
 			"Hide quick reply when top button clicked": { def: "false" },
 			"Scroll on new post": { def: "false" },
 			"Unique post content per image": { def: "false" },
-			"Autoupdate watched threads list": { def: "false" },
+			"Autoupdate watched threads list": { def: "false" }
 		}
 	};
 	
@@ -898,9 +934,7 @@ function ponychanx() {
 		}
 	};
 	
-	$jq(document).ready(function() {
-		Main.init();
-	});
+	Main.init();
 }
 
 function loadjQ(s)
