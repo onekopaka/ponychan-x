@@ -1,1 +1,3 @@
-Help, feedback and information at [this ponychan thread](http://www.ponychan.net/chan/meta/res/115168+50.html)
+Emergency fork had to happen.
+
+We apologize for the issues that may occur.

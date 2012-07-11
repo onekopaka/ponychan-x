@@ -1,0 +1,26 @@
+0.28
+- Added Reset quick reply option
+
+0.27
+- Fixed inline posts and hide post buttons on /all/
+- Added border to inline OP posts
+
+0.26
+- Fixed quick reply always reappearing on refresh
+- Added queued images counter to quick reply
+
+0.25
+- Added support thread link to options panel
+- Fixed board expanded threads not parsing
+- Added individual options for each keybind
+
+0.24
+- Fixed quick reply showing on read-only pages
+- Added NSFW and No File checkboxes to quick reply
+
+0.23
+- Changed hidden posts to show names beside the hide post button
+- Updated Settings panel CSS to match updated Left Bar
+- Updated quick reply mod panel
+- Added new quick reply embed options
+- Fixed Retry error after having a thread open for a long time
